@@ -19,9 +19,9 @@ error_chain!{
 }
 
 
-//use std::fs;
+use std::fs::File;
 use std::path::PathBuf;
-use read_lines::read_line;
+use read_lines::read_line::LineReader;
 //use std::fmt;
 
 
@@ -50,9 +50,13 @@ fn main() {
 
 
 fn run() -> Result<()> {
-    let mut liner = read_line::lines(PathBuf::from("/home/thibault/shared/testwin.txt"))
+    let file = File::open(PathBuf::from("filepath"))
+        .chain_err(|| "Error opening file")?;
+
+    let mut line_r = LineReader::new(file)
         .chain_err(|| "Error creating LineReader")?;
-    for line in liner {
+
+    for line in line_r {
         let line = line
             .chain_err(|| "Error reading line")?;
         println!("{}",line);
