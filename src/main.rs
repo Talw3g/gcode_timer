@@ -4,27 +4,20 @@ extern crate walkdir;
 extern crate read_lines;
 
 mod errors;
-//mod other_error {
-//    error_chain!{}
-//}
-//
-//error_chain!{
-//
-//    links {
-//        Another(other_error::Error, other_error::ErrorKind) #[cfg(unix)];
-//    }
-//
-//}
-
+pub mod lineparser;
+pub mod gcodes_def;
+mod gcode_lexer;
 
 use std::fs::File;
 use std::path::PathBuf;
+
 use read_lines::read_line::LineReader;
 use lineparser::parse_line;
 use errors::*;
+//use gcode_lexer::line_depacker;
+use gcodes_def::{Machine,GCode};
 //use std::fmt;
 
-pub mod lineparser;
 
 fn main() {
 
@@ -55,14 +48,20 @@ fn run() -> Result<()> {
     let line_reader = LineReader::new(file)
         .chain_err(|| "Error creating LineReader")?;
 
+    let mut machine = Machine::new(550.0);
+
     for line in line_reader {
         let line = line
             .chain_err(|| "Error reading line")?;
         if let Some(parsed) = parse_line(line)
             .chain_err(|| "Error parsing line")? {
-            println!("{:?}", parsed);
+            machine.line_depacker(parsed)
+                .chain_err(|| "Error depacking line")?;
+//            println!("{:?}", parsed);
         }
     }
+    println!("Machine: {:?}", machine);
     println!("Reached EOF");
     Ok(())
 }
+

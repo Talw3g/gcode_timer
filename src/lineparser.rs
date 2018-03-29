@@ -3,11 +3,13 @@ use super::errors::*;
 #[derive(Debug)]
 pub enum Codes {
     G(u8),
+    M(u8),
     X(f32),
     Y(f32),
     Z(f32),
     I(f32),
     J(f32),
+    F(f32),
 }
 
 fn create_code(code: char, acc: &String) -> Option<Codes> {
@@ -15,21 +17,37 @@ fn create_code(code: char, acc: &String) -> Option<Codes> {
     match code {
         'G' => {
             let value = acc.parse().unwrap();
-            return Some(Codes::G(value))
+            Some(Codes::G(value))
         },
         'X' => {
             let value = acc.parse().unwrap();
-            return Some(Codes::X(value))
+            Some(Codes::X(value))
         },
         'Y' => {
             let value = acc.parse().unwrap();
-            return Some(Codes::Y(value))
+            Some(Codes::Y(value))
         },
         'Z' => {
             let value = acc.parse().unwrap();
-            return Some(Codes::Z(value))
+            Some(Codes::Z(value))
         },
-        _ => return None,
+        'I' => {
+            let value = acc.parse().unwrap();
+            Some(Codes::I(value))
+        },
+        'J' => {
+            let value = acc.parse().unwrap();
+            Some(Codes::J(value))
+        },
+        'F' => {
+            let value = acc.parse().unwrap();
+            Some(Codes::F(value))
+        },
+        'M' => {
+            let value = acc.parse().unwrap();
+            Some(Codes::M(value))
+        },
+        _   => None,
     }
 }
 
