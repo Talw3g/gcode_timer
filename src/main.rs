@@ -6,6 +6,7 @@ mod errors;
 pub mod lineparser;
 pub mod gcodes_def;
 mod gcode_lexer;
+mod calculator;
 
 use std::fs::File;
 use std::path::PathBuf;
@@ -62,6 +63,9 @@ fn run() -> Result<()> {
             Some(m) => m,
             None => continue,
         };
+        let dist = modgroup.get_distance()
+            .chain_err(|| "Error calculating travel distance in modal group")?;
+//        println!("Modgroup: {:?}\n\n", modgroup);
     }
     println!("Machine: {:?}", machine);
     println!("Reached EOF");

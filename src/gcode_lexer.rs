@@ -45,13 +45,12 @@ impl Machine {
                     }
                     dest.j = Some(i);
                 },
-                Codes::F(i) => {
-                },
+                Codes::F(i) => self.speed = Some(i),
             }
         }
         let modgroup = ModalGroup {
             move_type: &self.move_type,
-            origin: &self.pos.copy(),
+            origin: self.pos.clone(),
             dest: Some(dest),
             speed: &self.speed,
             def_speed: &self.def_speed,
