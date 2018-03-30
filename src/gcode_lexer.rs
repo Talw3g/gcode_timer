@@ -51,14 +51,20 @@ impl Machine {
         }
         let modgroup = ModalGroup {
             move_type: &self.move_type,
-            origin: &self.pos,
-            dest: Some(&dest),
+            origin: &self.pos.copy(),
+            dest: Some(dest),
             speed: &self.speed,
             def_speed: &self.def_speed,
             unit: &self.unit,
             reference: &self.reference,
         };
-        Ok(modgroup)
+        match modgroup.dest {
+            Some(ref dest) => {
+                self.pos.update(&dest);
+            },
+            None => {},
+        }
+        Ok(Some(modgroup))
     }
 
     fn process_gcode(&mut self, gcode: GCode) {

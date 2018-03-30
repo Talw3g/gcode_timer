@@ -30,14 +30,14 @@ impl Machine {
 
 
 #[derive(Debug)]
-pub struct ModalGroup {
-    pub move_type: &Option<GCode>,
-    pub origin: &Coord,
-    pub dest: &Option<Coord>,
-    pub speed: &Option<f32>,
-    pub def_speed: &f32,
-    pub unit: &Option<Unit>,
-    pub reference: &Option<Referential>,
+pub struct ModalGroup<'a> {
+    pub move_type: &'a Option<GCode>,
+    pub origin: &'a Coord,
+    pub dest: Option<Coord>,
+    pub speed: &'a Option<f32>,
+    pub def_speed: &'a f32,
+    pub unit: &'a Option<Unit>,
+    pub reference: &'a Option<Referential>,
 }
 //impl ModalGroup {
 //    pub fn new() -> ModalGroup {
@@ -71,6 +71,27 @@ impl Coord {
             i: None,
             j: None,
         }
+    }
+
+    pub fn update(&mut self, updater: &Coord) {
+        if let Some(x) = updater.x {
+            self.x = updater.x;;
+        }
+        if let Some(y) = updater.y {
+            self.y = updater.y;;
+        }
+        if let Some(z) = updater.z {
+            self.z = updater.z;;
+        }
+    }
+
+    pub fn copy(&self) -> Coord {
+        let mut copy = Coord::new();
+        copy.x = match self.x {
+            Some(a) => Some(a.clone()),
+            None => None,
+        };
+        copy
     }
 }
 

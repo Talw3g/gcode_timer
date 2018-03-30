@@ -1,6 +1,5 @@
 #[macro_use]
 extern crate error_chain;
-extern crate walkdir;
 extern crate read_lines;
 
 mod errors;
@@ -53,12 +52,16 @@ fn run() -> Result<()> {
     for line in line_reader {
         let line = line
             .chain_err(|| "Error reading line")?;
-        if let Some(parsed) = parse_line(line)
+        let parsed = match parse_line(line)
             .chain_err(|| "Error parsing line")? {
-            machine.line_depacker(parsed)
-                .chain_err(|| "Error depacking line")?;
-//            println!("{:?}", parsed);
-        }
+            Some(p) => p,
+            None => continue,
+        };
+        let modgroup = match machine.line_depacker(parsed)
+            .chain_err(|| "Error depacking line")? {
+            Some(m) => m,
+            None => continue,
+        };
     }
     println!("Machine: {:?}", machine);
     println!("Reached EOF");
