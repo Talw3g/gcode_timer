@@ -42,13 +42,16 @@ fn main() {
 
 
 fn run() -> Result<()> {
-    let file = File::open(PathBuf::from("/home/thibault/shared/test.ngc"))
+    let file = File::open(PathBuf::from("/home/thibault/shared/manual.ngc"))
         .chain_err(|| "Error opening file")?;
 
     let line_reader = LineReader::new(file)
         .chain_err(|| "Error creating LineReader")?;
 
-    let mut machine = Machine::new(550.0);
+    let mut machine = Machine::new((550.0, 353., 442.));
+
+    let mut dist = 0.;
+    let mut time = 0.;
 
     for line in line_reader {
         let line = line
@@ -63,10 +66,13 @@ fn run() -> Result<()> {
             Some(m) => m,
             None => continue,
         };
-        let dist = modgroup.get_distance()
-            .chain_err(|| "Error calculating travel distance in modal group")?;
+        dist = dist + modgroup.get_distance()
+            .chain_err(|| "Error computing travel distance in modal group")?;
+        time = time + modgroup.get_duration()
+            .chain_err(|| "Error computing duration in modal group")?;
 //        println!("Modgroup: {:?}\n\n", modgroup);
     }
+    println!("Total distance: {}\nTotal time: {}", dist, time);
     println!("Machine: {:?}", machine);
     println!("Reached EOF");
     Ok(())

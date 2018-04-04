@@ -2,14 +2,14 @@
 pub struct Machine {
     pub move_type: Option<GCode>,
     pub pos: Coord,
-    pub def_speed: f32,
+    pub max_speed: (f32,f32,f32),
     pub speed: Option<f32>,
     pub unit: Option<Unit>,
     pub reference: Option<Referential>,
 
 }
 impl Machine {
-    pub fn new(def_speed: f32) -> Machine {
+    pub fn new(max_speed: (f32,f32,f32)) -> Machine {
         Machine {
             move_type: None,
             pos: Coord {
@@ -18,8 +18,9 @@ impl Machine {
                 z: Some(0.0),
                 i: None,
                 j: None,
+                k: None,
             },
-            def_speed,
+            max_speed,
             speed: None,
             unit: None,
             reference: None,
@@ -35,7 +36,7 @@ pub struct ModalGroup<'a> {
     pub origin: Coord,
     pub dest: Option<Coord>,
     pub speed: &'a Option<f32>,
-    pub def_speed: &'a f32,
+    pub max_speed: &'a (f32,f32,f32),
     pub unit: &'a Option<Unit>,
     pub reference: &'a Option<Referential>,
 }
@@ -48,6 +49,7 @@ pub struct Coord {
     pub z: Option<f32>,
     pub i: Option<f32>,
     pub j: Option<f32>,
+    pub k: Option<f32>,
 
 }
 impl Coord {
@@ -58,6 +60,7 @@ impl Coord {
             z: None,
             i: None,
             j: None,
+            k: None,
         }
     }
 
@@ -70,6 +73,55 @@ impl Coord {
         }
         if let Some(_) = updater.z {
             self.z = updater.z;;
+        }
+    }
+
+    pub fn add(&mut self, adder: &Coord) {
+        if let Some(ax) = adder.x {
+            if let Some(x) =  self.x {
+                self.x = Some(x + ax);
+            }
+        }
+        if let Some(ay) = adder.y {
+            if let Some(y) =  self.y {
+                self.y = Some(y + ay);
+            }
+        }
+        if let Some(az) = adder.z {
+            if let Some(z) =  self.z {
+                self.z = Some(z + az);
+            }
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        if let &Coord {x: None, y: None, z: None,
+            i: None, j: None, k: None,} = self {
+            return true
+        }
+        else {
+            return false
+        }
+    }
+
+    pub fn to_mm(&mut self) {
+        if let Some(u) = self.x {
+            self.x = Some(u*25.4);
+        }
+        if let Some(u) = self.y {
+            self.y = Some(u*25.4);
+        }
+        if let Some(u) = self.z {
+            self.z = Some(u*25.4);
+        }
+        if let Some(u) = self.i {
+            self.i = Some(u*25.4);
+        }
+        if let Some(u) = self.j {
+            self.j = Some(u*25.4);
+        }
+        if let Some(u) = self.k {
+            self.k = Some(u*25.4);
         }
     }
 }

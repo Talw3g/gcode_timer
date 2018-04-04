@@ -9,6 +9,7 @@ pub enum Codes {
     Z(f32),
     I(f32),
     J(f32),
+    K(f32),
     F(f32),
 }
 
@@ -38,6 +39,10 @@ fn create_code(code: char, acc: &String) -> Option<Codes> {
         'J' => {
             let value = acc.parse().unwrap();
             Some(Codes::J(value))
+        },
+        'K' => {
+            let value = acc.parse().unwrap();
+            Some(Codes::K(value))
         },
         'F' => {
             let value = acc.parse().unwrap();

@@ -5,6 +5,7 @@ use super::lineparser::*;
 impl Machine {
     pub fn line_depacker(&mut self, line: Vec<Codes>) -> Result<Option<ModalGroup>> {
         let mut dest = Coord::new();
+        let mut speed = None;
         for item in line {
             match item {
                 Codes::G(i) => {
@@ -45,15 +46,29 @@ impl Machine {
                     }
                     dest.j = Some(i);
                 },
-                Codes::F(i) => self.speed = Some(i),
+                Codes::K(i) => {
+                    if let Some(_) = dest.k {
+                        bail!("Two K coordinate in the same modal group");
+                    }
+                    dest.k = Some(i);
+                },
+                Codes::F(i) => speed = Some(i),
             }
         }
+
+        let (dest, speed) = self.convert_units(dest,speed)
+            .chain_err(|| "Error converting units")?;
+
+        if let Some(s) = speed {
+            self.speed = Some(s);
+        }
+
         let modgroup = ModalGroup {
             move_type: &self.move_type,
             origin: self.pos.clone(),
             dest: Some(dest),
             speed: &self.speed,
-            def_speed: &self.def_speed,
+            max_speed: &self.max_speed,
             unit: &self.unit,
             reference: &self.reference,
         };
@@ -81,8 +96,29 @@ impl Machine {
         }
     }
 
+    fn convert_units(&self, mut dest: Coord, mut speed: Option<f32>) -> Result<(Coord, Option<f32>)> {
+        match self.unit {
+            Some(Unit::Inch) => {
+                dest.to_mm();
+                if let Some(u) = speed {
+                    speed = Some(u*25.4);
+                }
+            },
+            Some(Unit::MM) => {},
+            None => {
+                if !dest.is_empty() || !speed.is_none() {
+                    bail!("Coordinates set without unit.");
+                }
+            },
+        }
+        Ok((dest, speed))
+    }
+
 
 }
+
+
+
 
 fn g_tokenizer(i: u8) -> Result<GCode> {
     match i {
