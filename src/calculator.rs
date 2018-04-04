@@ -1,8 +1,31 @@
 use gcodes_def::*;
 use super::errors::*;
+use std::f32::consts::PI;
+
+enum Direction {
+    CW,
+    CCW,
+}
 
 impl<'a> ModalGroup<'a> {
-    pub fn get_distance(&'a self) -> Result<f32> {
+    pub fn get_stats(&'a self) -> Result<(f32,f32)> {
+        let dist = self.get_distance()
+            .chain_err(|| "Error computing travel distance")?;
+        let time = self.get_duration(dist)
+            .chain_err(|| "Error computing travel duration")?;
+        Ok((time,dist))
+    }
+
+    fn get_distance(&'a self) -> Result<f32> {
+        if let Some(dest) = self.dest {
+            if dest.is_empty() {
+                return Ok(0.)
+            }
+        }
+        else {
+            return Ok(0.)
+        }
+
         let move_type = match self.move_type {
             &Some(ref mt) => {
                 match mt {
@@ -13,15 +36,13 @@ impl<'a> ModalGroup<'a> {
             &None => return Ok(0.),
         };
         match move_type {
-            &MoveTypes::G0 | &MoveTypes::G1 => {
-                self.get_dist_line()
-            },
-            _ => return Ok(0.),
+            &MoveTypes::G0 | &MoveTypes::G1 => self.get_dist_line(),
+            &MoveTypes::G2 => self.get_dist_arc(Direction::CW),
+            &MoveTypes::G3 => self.get_dist_arc(Direction::CCW),
         }
     }
 
-
-    pub fn get_duration(&'a self) -> Result<f32> {
+    fn get_duration(&'a self, dist: f32) -> Result<f32> {
         let move_type = match self.move_type {
             &Some(ref mt) => {
                 match mt {
@@ -40,8 +61,6 @@ impl<'a> ModalGroup<'a> {
             &MoveTypes::G1 => {
                 match self.speed {
                     &Some(ref s) => {
-                        let dist = self.get_distance()
-                            .chain_err(|| "Error computing distance")?;
                         let g1_duration = dist/s*60.;
                         let g0_duration = self.get_durat_g0()
                             .chain_err(|| "error computing travel duration for g0 group")?;
@@ -53,20 +72,26 @@ impl<'a> ModalGroup<'a> {
             },
             ref m => {
                 match self.speed {
-                    &Some(ref s) => {
-                        let dist = self.get_distance()
-                            .chain_err(|| "Error computing distance")?;
-                        let g1_duration = dist/s*60.;
-                        let g0_duration = self.get_durat_g0()
-                            .chain_err(|| "error computing travel duration for g0 group")?;
-                        let max_duration = g1_duration.max(g0_duration);
-                        return Ok(max_duration);
-                    },
+                    &Some(ref s) => return Ok(dist/s*60.),
                     &None => bail!(format!("No speed set for move of type: {:?}", m)),
                 }
             },
         };
     }
+
+    fn get_durat_g0(&self) -> Result<f32> {
+        let (delta_x, delta_y, delta_z) = self.get_deltas()
+            .chain_err(|| "Error computing deltas")?;
+        let &(ms_x, ms_y, ms_z) = self.max_speed;
+
+        let dura_x = delta_x.abs() / ms_x * 60.;
+        let dura_y = delta_y.abs() / ms_y * 60.;
+        let dura_z = delta_z.abs() / ms_z * 60.;
+        let max_duration = dura_x.max(dura_y).max(dura_z);
+        Ok(max_duration)
+    }
+
+
 
     fn get_deltas(&self) -> Result<(f32,f32,f32)> {
         let dest = match self.dest {
@@ -128,15 +153,30 @@ impl<'a> ModalGroup<'a> {
         Ok(dist)
     }
 
-    fn get_durat_g0(&self) -> Result<f32> {
-        let (delta_x, delta_y, delta_z) = self.get_deltas()
-            .chain_err(|| "Error computing deltas")?;
-        let &(ms_x, ms_y, ms_z) = self.max_speed;
+    fn get_dist_arc(&self, dir: Direction) -> Result<f32> {
+        let dest = match self.dest {
+            Some(d) => d,
+            None => return Ok(0.),
+        };
+        let reference = match self.reference {
+            &Some(ref r) => r,
+            &None => bail!("No referential set"),
+        };
+        let (cp,cd) = self.origin.to_rad_vec(&dest, reference)
+            .chain_err(|| "Error getting radius vectors")?;
+        let radius = cp.norm();
+        let mut theta = ( cp.scalar_product(&cd)/radius.powi(2) ).acos();
 
-        let dura_x = delta_x.abs() / ms_x * 60.;
-        let dura_y = delta_y.abs() / ms_y * 60.;
-        let dura_z = delta_z.abs() / ms_z * 60.;
-        let max_duration = dura_x.max(dura_y).max(dura_z);
-        Ok(max_duration)
+        match dir {
+            Direction::CW if cp.cross_product(&cd).is_sign_positive() => theta = 2.*PI - theta,
+            Direction::CCW if cp.cross_product(&cd).is_sign_negative() => theta = 2.*PI - theta,
+            _ => {},
+        }
+
+        if theta == 0. { theta = 2.*PI; }
+
+        let dist = radius * theta;
+//        println!("radius: {}, scalar: {}, theta: {}", radius, cp.scalar_product(&cd), theta.to_degrees());
+        Ok(dist)
     }
 }

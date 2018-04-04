@@ -7,6 +7,7 @@ pub mod lineparser;
 pub mod gcodes_def;
 mod gcode_lexer;
 mod calculator;
+mod math_tools;
 
 use std::fs::File;
 use std::path::PathBuf;
@@ -15,7 +16,7 @@ use read_lines::read_line::LineReader;
 use lineparser::parse_line;
 use errors::*;
 //use gcode_lexer::line_depacker;
-use gcodes_def::{Machine,GCode};
+use gcodes_def::{Machine};
 //use std::fmt;
 
 
@@ -66,14 +67,12 @@ fn run() -> Result<()> {
             Some(m) => m,
             None => continue,
         };
-        dist = dist + modgroup.get_distance()
-            .chain_err(|| "Error computing travel distance in modal group")?;
-        time = time + modgroup.get_duration()
-            .chain_err(|| "Error computing duration in modal group")?;
-//        println!("Modgroup: {:?}\n\n", modgroup);
+        let (t,d) = modgroup.get_stats()
+            .chain_err(|| "Error computing stats in modal group")?;
+        time = time + t;
+        dist = dist + d;
     }
     println!("Total distance: {}\nTotal time: {}", dist, time);
-    println!("Machine: {:?}", machine);
     println!("Reached EOF");
     Ok(())
 }

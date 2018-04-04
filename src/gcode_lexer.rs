@@ -11,7 +11,6 @@ impl Machine {
                 Codes::G(i) => {
                     let gcode = g_tokenizer(i)
                         .chain_err(|| "Error depacking G code")?;
-                    println!("gcode: {:?}", gcode);
                     self.process_gcode(gcode);
                 },
                 Codes::M(i) => {
