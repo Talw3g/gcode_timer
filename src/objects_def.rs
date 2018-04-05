@@ -6,6 +6,8 @@ pub struct Machine {
     pub speed: Option<f32>,
     pub unit: Option<Unit>,
     pub reference: Option<Referential>,
+    pub tool_number: Option<u8>,
+    pub status: Status,
 
 }
 impl Machine {
@@ -24,6 +26,8 @@ impl Machine {
             speed: None,
             unit: None,
             reference: None,
+            tool_number: None,
+            status: Status::Continue,
         }
     }
 }
@@ -39,6 +43,32 @@ pub struct ModalGroup<'a> {
     pub max_speed: &'a (f32,f32,f32),
     pub unit: &'a Option<Unit>,
     pub reference: &'a Option<Referential>,
+}
+
+
+#[derive(Debug, Copy)]
+pub struct Tool {
+    pub tool_number: Option<u8>,
+    pub duration: f32,
+    pub distance: f32,
+}
+impl Tool {
+    pub fn new(tool_number: Option<u8>) -> Tool {
+        Tool {
+            tool_number,
+            duration: 0.,
+            distance: 0.,
+        }
+    }
+
+    pub fn reset(&mut self, tool: Option<u8>) {
+        self.tool_number = tool;
+        self.duration = 0.;
+        self.distance = 0.;
+    }
+}
+impl Clone for Tool {
+    fn clone(&self) -> Tool {*self}
 }
 
 
@@ -164,4 +194,51 @@ pub enum Unit {
 pub enum Referential {
     Absolute,
     Increment,
+}
+
+#[derive(Debug)]
+pub enum Status {
+    Continue,
+    EOP,
+}
+
+pub fn get_tool_messages(tools_list: Vec<Tool>) -> String {
+    let mut message = String::new();
+    for item in tools_list.iter() {
+        match item.tool_number {
+            Some(u) => message.push_str(format!("Tool {}:\n", u).as_str()),
+            None => message.push_str("No tool:\n"),
+        }
+        message.push_str(format!("  Duration: {}\n", time_format(item.duration)).as_str());
+        message.push_str(format!("  Distance: {}mm\n\n", item.distance).as_str());
+    }
+    message
+}
+
+fn time_format(mut t: f32) -> String {
+    let mut out = String::new();
+    t = t.round();
+
+    let h = (t/3600.).floor();
+    if h != 0. {
+        out.push_str(format!("{}h",h).as_str());
+    }
+
+    t = t - h*3600.;
+
+    let m = (t/60.).floor();
+    if m != 0. {
+        out.push_str(format!("{}m",m).as_str());
+    }
+
+    t = t - m*60.;
+
+    if t != 0. {
+        out.push_str(format!("{}s",t).as_str());
+    }
+    else {
+        out.push_str("< 1s");
+    }
+
+    out
 }

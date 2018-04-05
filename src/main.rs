@@ -4,10 +4,11 @@ extern crate read_lines;
 
 mod errors;
 pub mod lineparser;
-pub mod gcodes_def;
+pub mod objects_def;
 mod gcode_lexer;
 mod calculator;
 mod math_tools;
+mod warnings;
 
 use std::fs::File;
 use std::path::PathBuf;
@@ -15,9 +16,8 @@ use std::path::PathBuf;
 use read_lines::read_line::LineReader;
 use lineparser::parse_line;
 use errors::*;
-//use gcode_lexer::line_depacker;
-use gcodes_def::{Machine};
-//use std::fmt;
+use objects_def::{Machine,Status,Tool,get_tool_messages};
+use warnings::Warnlog;
 
 
 fn main() {
@@ -43,16 +43,17 @@ fn main() {
 
 
 fn run() -> Result<()> {
-    let file = File::open(PathBuf::from("/home/thibault/shared/manual.ngc"))
+    let file = File::open(PathBuf::from("/home/thibault/shared/disks.ngc"))
         .chain_err(|| "Error opening file")?;
 
     let line_reader = LineReader::new(file)
         .chain_err(|| "Error creating LineReader")?;
 
     let mut machine = Machine::new((550.0, 353., 442.));
+    let mut warnlog = Warnlog::new();
+    let mut tools_list: Vec<Tool> = Vec::new();
 
-    let mut dist = 0.;
-    let mut time = 0.;
+    let mut tool = Tool::new(None);
 
     for line in line_reader {
         let line = line
@@ -62,18 +63,27 @@ fn run() -> Result<()> {
             Some(p) => p,
             None => continue,
         };
-        let modgroup = match machine.line_depacker(parsed)
-            .chain_err(|| "Error depacking line")? {
-            Some(m) => m,
-            None => continue,
-        };
-        let (t,d) = modgroup.get_stats()
+        let (modgroup, &tool_number) = machine.line_depacker(parsed)
+            .chain_err(|| "Error depacking line")?;
+
+        let (t,d) = modgroup.get_stats(&mut warnlog)
             .chain_err(|| "Error computing stats in modal group")?;
-        time = time + t;
-        dist = dist + d;
+
+        if tool_number != tool.tool_number {
+            tools_list.push(tool.clone());
+            tool.reset(tool_number);
+        }
+        tool.duration = tool.duration + t;
+        tool.distance = tool.distance + d;
+        if let Status::EOP = machine.status {
+            tools_list.push(tool);
+            warnlog.print_messages();
+            let messages = get_tool_messages(tools_list);
+            println!("{}", messages);
+            println!("Reached EOP");
+            ::std::process::exit(0)
+        }
     }
-    println!("Total distance: {}\nTotal time: {}", dist, time);
-    println!("Reached EOF");
-    Ok(())
+    bail!("Reached EOF without End Of Programm");
 }
 

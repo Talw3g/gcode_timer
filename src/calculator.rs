@@ -1,6 +1,7 @@
-use gcodes_def::*;
+use objects_def::*;
 use super::errors::*;
 use std::f32::consts::PI;
+use warnings::*;
 
 enum Direction {
     CW,
@@ -8,10 +9,10 @@ enum Direction {
 }
 
 impl<'a> ModalGroup<'a> {
-    pub fn get_stats(&'a self) -> Result<(f32,f32)> {
+    pub fn get_stats(&'a self, warnlog: &mut Warnlog) -> Result<(f32,f32)> {
         let dist = self.get_distance()
             .chain_err(|| "Error computing travel distance")?;
-        let time = self.get_duration(dist)
+        let time = self.get_duration(dist, warnlog)
             .chain_err(|| "Error computing travel duration")?;
         Ok((time,dist))
     }
@@ -42,7 +43,7 @@ impl<'a> ModalGroup<'a> {
         }
     }
 
-    fn get_duration(&'a self, dist: f32) -> Result<f32> {
+    fn get_duration(&'a self, dist: f32, warnlog: &mut Warnlog) -> Result<f32> {
         let move_type = match self.move_type {
             &Some(ref mt) => {
                 match mt {
@@ -52,19 +53,21 @@ impl<'a> ModalGroup<'a> {
             },
             &None => return Ok(0.),
         };
+
+        let min_duration = self.get_durat_g0()
+            .chain_err(|| "Error computing travel duration for G0 group")?;
+
         match move_type {
-            &MoveTypes::G0 => {
-                let duration = self.get_durat_g0()
-                    .chain_err(|| "error computing travel duration for g0 group")?;
-                return Ok(duration)
-            },
+            &MoveTypes::G0 => Ok(min_duration),
             &MoveTypes::G1 => {
                 match self.speed {
                     &Some(ref s) => {
                         let g1_duration = dist/s*60.;
-                        let g0_duration = self.get_durat_g0()
-                            .chain_err(|| "error computing travel duration for g0 group")?;
-                        let max_duration = g1_duration.max(g0_duration);
+                        let mut max_duration = g1_duration;
+                        if g1_duration < min_duration {
+                            max_duration = min_duration;
+                            warnlog.warn(WarnType::TooFast);
+                        }
                         return Ok(max_duration);
                     },
                     &None => bail!("No speed set for move of type: G1"),
@@ -72,11 +75,19 @@ impl<'a> ModalGroup<'a> {
             },
             ref m => {
                 match self.speed {
-                    &Some(ref s) => return Ok(dist/s*60.),
+                    &Some(ref s) => {
+                        let arc_duration = dist/s*60.;
+                        let mut max_duration = arc_duration;
+                        if arc_duration < min_duration {
+                            max_duration = min_duration;
+                            warnlog.warn(WarnType::TooFast);
+                        }
+                        return Ok(max_duration);
+                    },
                     &None => bail!(format!("No speed set for move of type: {:?}", m)),
                 }
             },
-        };
+        }
     }
 
     fn get_durat_g0(&self) -> Result<f32> {
@@ -166,6 +177,9 @@ impl<'a> ModalGroup<'a> {
             .chain_err(|| "Error getting radius vectors")?;
         let radius = cp.norm();
         let mut theta = ( cp.scalar_product(&cd)/radius.powi(2) ).acos();
+        if theta.is_nan() {
+            bail!(format!("theta is NaN ! :(\norigin: {:?}\ndest: {:?}\ncp: {:?}\ncd: {:?}\nradius:{}",self.origin,dest,cp,cd,radius));
+        }
 
         match dir {
             Direction::CW if cp.cross_product(&cd).is_sign_positive() => theta = 2.*PI - theta,

@@ -1,4 +1,4 @@
-use gcodes_def::*;
+use objects_def::*;
 use super::errors::*;
 
 impl Coord {
@@ -99,5 +99,5 @@ impl Coord {
 
         scalar_prod
     }
-
 }
+

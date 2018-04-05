@@ -1,9 +1,9 @@
 use super::errors::*;
-use super::gcodes_def::*;
+use super::objects_def::*;
 use super::lineparser::*;
 
 impl Machine {
-    pub fn line_depacker(&mut self, line: Vec<Codes>) -> Result<Option<ModalGroup>> {
+    pub fn line_depacker(&mut self, line: Vec<Codes>) -> Result<(ModalGroup, &Option<u8>)> {
         let mut dest = Coord::new();
         let mut speed = None;
         for item in line {
@@ -14,6 +14,12 @@ impl Machine {
                     self.process_gcode(gcode);
                 },
                 Codes::M(i) => {
+                    if i == 30 {
+                        self.status = Status::EOP;
+                    }
+                },
+                Codes::T(i) => {
+                    self.tool_number = Some(i);
                 },
                 Codes::X(i) => {
                     if let Some(_) = dest.x {
@@ -77,7 +83,7 @@ impl Machine {
             },
             None => {},
         }
-        Ok(Some(modgroup))
+        Ok((modgroup, &self.tool_number))
     }
 
     fn process_gcode(&mut self, gcode: GCode) {
@@ -112,8 +118,6 @@ impl Machine {
         }
         Ok((dest, speed))
     }
-
-
 }
 
 
