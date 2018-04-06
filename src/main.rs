@@ -43,7 +43,7 @@ fn main() {
 
 
 fn run() -> Result<()> {
-    let file = File::open(PathBuf::from("/home/thibault/shared/disks.ngc"))
+    let file = File::open(PathBuf::from("/home/thibault/shared/face.ngc"))
         .chain_err(|| "Error opening file")?;
 
     let line_reader = LineReader::new(file)

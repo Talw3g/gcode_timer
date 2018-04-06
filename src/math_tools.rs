@@ -3,7 +3,7 @@ use super::errors::*;
 
 impl Coord {
 
-    pub fn to_rad_vec(&self, dest: &Coord, reference: &Referential) -> Result<(Coord,Coord)> {
+    pub fn to_rad_vec(&self, dest: &Coord, reference: &Referential) -> Result<(Coord,Coord,f32)> {
         let &dest = dest;
 
         let x0 = match self.x {
@@ -19,7 +19,7 @@ impl Coord {
             None => bail!("Current Z position not set"),
         };
 
-        let (x1,y1,z1,i,j,k) = match reference {
+        let (x1,y1,mut z1,i,j,k) = match reference {
             &Referential::Absolute => {
                 let x1 = dest.x.unwrap_or(x0);
                 let y1 = dest.y.unwrap_or(y0);
@@ -40,6 +40,11 @@ impl Coord {
             },
         };
 
+        let mut dz = 0.;
+        if k == 0. {
+            dz = z1 - z0;
+            z1 = z0;
+        }
 
         let cp = Coord {
             x: Some(-i),
@@ -57,7 +62,7 @@ impl Coord {
             j: None,
             k: None,
         };
-        Ok((cp,cd))
+        Ok((cp,cd,dz))
     }
 
     pub fn norm(&self) -> f32 {

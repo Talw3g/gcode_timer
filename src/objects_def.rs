@@ -210,7 +210,7 @@ pub fn get_tool_messages(tools_list: Vec<Tool>) -> String {
             None => message.push_str("No tool:\n"),
         }
         message.push_str(format!("  Duration: {}\n", time_format(item.duration)).as_str());
-        message.push_str(format!("  Distance: {}mm\n\n", item.distance).as_str());
+        message.push_str(format!("  Distance: {:.*}mm\n\n", 1, item.distance).as_str());
     }
     message
 }

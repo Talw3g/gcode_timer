@@ -173,12 +173,16 @@ impl<'a> ModalGroup<'a> {
             &Some(ref r) => r,
             &None => bail!("No referential set"),
         };
-        let (cp,cd) = self.origin.to_rad_vec(&dest, reference)
+        let (cp,cd,dz) = self.origin.to_rad_vec(&dest, reference)
             .chain_err(|| "Error getting radius vectors")?;
-        let radius = cp.norm();
-        let mut theta = ( cp.scalar_product(&cd)/radius.powi(2) ).acos();
+
+        let n_cp = cp.norm();
+        let n_cd = cd.norm();
+        let radius = (n_cp + n_cd)/2.;
+
+        let mut theta = ( cp.scalar_product(&cd)/(n_cp*n_cd) ).acos();
         if theta.is_nan() {
-            bail!(format!("theta is NaN ! :(\norigin: {:?}\ndest: {:?}\ncp: {:?}\ncd: {:?}\nradius:{}",self.origin,dest,cp,cd,radius));
+            bail!("Error while computing angle between radius vectors");
         }
 
         match dir {
@@ -189,8 +193,7 @@ impl<'a> ModalGroup<'a> {
 
         if theta == 0. { theta = 2.*PI; }
 
-        let dist = radius * theta;
-//        println!("radius: {}, scalar: {}, theta: {}", radius, cp.scalar_product(&cd), theta.to_degrees());
+        let dist = ( (radius*theta).powi(2) + dz.powi(2) ).sqrt();
         Ok(dist)
     }
 }
