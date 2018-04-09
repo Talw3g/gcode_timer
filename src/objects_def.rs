@@ -1,3 +1,5 @@
+use super::Cnc;
+
 #[derive(Debug)]
 pub struct Machine {
     pub move_type: Option<GCode>,
@@ -11,7 +13,7 @@ pub struct Machine {
 
 }
 impl Machine {
-    pub fn new(max_speed: (f32,f32,f32)) -> Machine {
+    pub fn new(config: Cnc) -> Machine {
         Machine {
             move_type: None,
             pos: Coord {
@@ -22,7 +24,11 @@ impl Machine {
                 j: None,
                 k: None,
             },
-            max_speed,
+            max_speed: (
+                config.speed_x,
+                config.speed_y,
+                config.speed_z,
+            ),
             speed: None,
             unit: None,
             reference: None,
@@ -207,7 +213,8 @@ pub fn get_tool_messages(tools_list: Vec<Tool>) -> String {
     for item in tools_list.iter() {
         match item.tool_number {
             Some(u) => message.push_str(format!("Tool {}:\n", u).as_str()),
-            None => message.push_str("No tool:\n"),
+            None if item.distance != 0. => message.push_str("No tool:\n"),
+            None => continue,
         }
         message.push_str(format!("  Duration: {}\n", time_format(item.duration)).as_str());
         message.push_str(format!("  Distance: {:.*}mm\n\n", 1, item.distance).as_str());
@@ -217,7 +224,6 @@ pub fn get_tool_messages(tools_list: Vec<Tool>) -> String {
 
 fn time_format(mut t: f32) -> String {
     let mut out = String::new();
-    t = t.round();
 
     let h = (t/3600.).floor();
     if h != 0. {

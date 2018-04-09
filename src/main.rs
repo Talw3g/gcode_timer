@@ -1,5 +1,9 @@
 #[macro_use]
 extern crate error_chain;
+#[macro_use]
+extern crate serde_derive;
+
+extern crate toml;
 extern crate read_lines;
 
 mod errors;
@@ -11,13 +15,28 @@ mod math_tools;
 mod warnings;
 
 use std::fs::File;
-use std::path::PathBuf;
+use std::path::{PathBuf,Path};
+use std::io::Read;
+use std::str;
+use std::env;
 
 use read_lines::read_line::LineReader;
 use lineparser::parse_line;
 use errors::*;
 use objects_def::{Machine,Status,Tool,get_tool_messages};
 use warnings::Warnlog;
+
+#[derive(Debug, Deserialize)]
+struct Config {
+    cnc: Cnc,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Cnc {
+    pub speed_x: f32,
+    pub speed_y: f32,
+    pub speed_z: f32,
+}
 
 
 fn main() {
@@ -43,13 +62,16 @@ fn main() {
 
 
 fn run() -> Result<()> {
-    let file = File::open(PathBuf::from("/home/thibault/shared/face.ngc"))
+    let config = get_config()
+        .chain_err(|| "Error parsing config file")?;
+
+    let file = File::open(PathBuf::from("/home/thibault/shared/manual.ngc"))
         .chain_err(|| "Error opening file")?;
 
     let line_reader = LineReader::new(file)
         .chain_err(|| "Error creating LineReader")?;
 
-    let mut machine = Machine::new((550.0, 353., 442.));
+    let mut machine = Machine::new(config.cnc);
     let mut warnlog = Warnlog::new();
     let mut tools_list: Vec<Tool> = Vec::new();
 
@@ -87,3 +109,27 @@ fn run() -> Result<()> {
     bail!("Reached EOF without End Of Programm");
 }
 
+fn get_config() -> Result<Config> {
+    let home = match env::home_dir() {
+        Some(h) => h,
+        None => bail!("Could not get home directory"),
+    };
+    let config_path = Path::new(".gcode_timer/config.toml");
+    let path = home.join(config_path).canonicalize()
+        .chain_err(|| "Error canonicalizing path")?;
+
+    let mut file = File::open(path)
+        .chain_err(|| "Error opening config file")?;
+    let mut buffer = Vec::new();
+
+    file.read_to_end(&mut buffer)
+        .chain_err(|| "Error reading config file")?;
+
+    let filestr = str::from_utf8(&buffer)
+        .chain_err(|| "Error converting buffer to utf8 str")?;
+    let config: Config = toml::from_str(filestr)
+        .chain_err(|| "Error parsing Config from config file")?;
+
+    Ok(config)
+
+}
