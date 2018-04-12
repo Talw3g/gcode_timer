@@ -119,7 +119,7 @@ fn time_format(mut t: f32) -> String {
 
     t = t - m*60.;
 
-    if t != 0. {
+    if t > 1. {
         out.push_str(format!("{:.*}s",0,t).as_str());
     }
     else {
