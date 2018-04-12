@@ -1,7 +1,9 @@
+use std::f32::consts::PI;
+use log::Level;
+
 use objects_def::*;
 use super::errors::*;
-use std::f32::consts::PI;
-use warnings::*;
+use output::*;
 
 enum Direction {
     CW,
@@ -12,8 +14,14 @@ impl<'a> ModalGroup<'a> {
     pub fn get_stats(&'a self, warnlog: &mut Warnlog) -> Result<(f32,f32)> {
         let dist = self.get_distance()
             .chain_err(|| "Error computing travel distance")?;
+
+        if log_enabled!(Level::Debug) {debug!("Distance: {}", dist);}
+
         let time = self.get_duration(dist, warnlog)
             .chain_err(|| "Error computing travel duration")?;
+
+        if log_enabled!(Level::Debug) {debug!("Duration: {}", time);}
+
         Ok((time,dist))
     }
 
@@ -99,6 +107,9 @@ impl<'a> ModalGroup<'a> {
         let dura_y = delta_y.abs() / ms_y * 60.;
         let dura_z = delta_z.abs() / ms_z * 60.;
         let max_duration = dura_x.max(dura_y).max(dura_z);
+
+        if log_enabled!(Level::Trace) {trace!("G0 duration: {}", max_duration);}
+
         Ok(max_duration)
     }
 
@@ -160,6 +171,11 @@ impl<'a> ModalGroup<'a> {
     fn get_dist_line(&self) -> Result<f32> {
         let (delta_x, delta_y, delta_z) = self.get_deltas()
             .chain_err(|| "Error computing deltas")?;
+
+        if log_enabled!(Level::Trace) {
+            trace!("get_dist_line: deltas=({},{},{})", delta_x, delta_y, delta_z);
+        }
+
         let dist = (delta_x.powi(2) + delta_y.powi(2) + delta_z.powi(2)).sqrt();
         Ok(dist)
     }
@@ -194,6 +210,16 @@ impl<'a> ModalGroup<'a> {
         if theta == 0. { theta = 2.*PI; }
 
         let dist = ( (radius*theta).powi(2) + dz.powi(2) ).sqrt();
+
+        if log_enabled!(Level::Trace) {
+            trace!("get_dist_arc:\n    \
+                cp:{:?}\n    \
+                cd:{:?}\n    \
+                radius:{}\n    \
+                theta:{}",
+                cp, cd, radius, theta/PI);
+        }
+
         Ok(dist)
     }
 }
