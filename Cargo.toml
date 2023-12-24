@@ -2,6 +2,7 @@
 name = "gcode_timer"
 version = "0.1.0"
 authors = ["Thibault <tmarion90@gmail.com>"]
+edition = "2021"
 
 [dependencies]
 error-chain = "0.11.0"
@@ -13,3 +14,4 @@ clap = "2.31.2"
 simplelog= "^0.5.1"
 log= "0.4.1"
 chrono= "~0.4"
+home = "0.5.9"

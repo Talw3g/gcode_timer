@@ -3,7 +3,7 @@ use std::fs::File;
 use std::path::PathBuf;
 
 use super::errors::*;
-use objects_def::Tool;
+use crate::objects_def::Tool;
 
 pub fn logger_init(logconf: (u8, Option<PathBuf>)) -> Result<()> {
     let (verbose, logfile) = logconf;
@@ -22,18 +22,18 @@ pub fn logger_init(logconf: (u8, Option<PathBuf>)) -> Result<()> {
                 Some(t) => t,
                 None => bail!("Error creating TermLogger"),
             },
-            WriteLogger::new(LevelFilter::Trace, Config::default(), File::create(f)
-                .chain_err(|| "Error creating file")?),
-        ]).chain_err(|| "Error creating CombinedLogger")?;
-    }
-    else {
-        TermLogger::init(level, Config::default())
-            .chain_err(|| "Error creating TermLogger")?;
+            WriteLogger::new(
+                LevelFilter::Trace,
+                Config::default(),
+                File::create(f).chain_err(|| "Error creating file")?,
+            ),
+        ])
+        .chain_err(|| "Error creating CombinedLogger")?;
+    } else {
+        TermLogger::init(level, Config::default()).chain_err(|| "Error creating TermLogger")?;
     }
     Ok(())
 }
-
-
 
 #[derive(PartialEq)]
 pub enum WarnType {
@@ -56,11 +56,13 @@ impl Warnlog {
     pub fn warn(&mut self, t: WarnType) {
         match t {
             WarnType::TooFast => {
-                let message = String::from("Feed speed is higher than set machine's capabilities: \
+                let message = String::from(
+                    "Feed speed is higher than set machine's capabilities: \
                                             duration results may be imprecise. \
-                                            Moreover, it will probably damage the CNC.");
-                self.store_messages(message,t);
-            },
+                                            Moreover, it will probably damage the CNC.",
+                );
+                self.store_messages(message, t);
+            }
         }
     }
 
@@ -105,24 +107,23 @@ pub fn get_tool_messages(tools_list: Vec<Tool>, list_result: bool) -> String {
 fn time_format(mut t: f32) -> String {
     let mut out = String::new();
 
-    let h = (t/3600.).floor();
+    let h = (t / 3600.).floor();
     if h != 0. {
-        out.push_str(format!("{}h",h).as_str());
+        out.push_str(format!("{}h", h).as_str());
     }
 
-    t = t - h*3600.;
+    t = t - h * 3600.;
 
-    let m = (t/60.).floor();
+    let m = (t / 60.).floor();
     if m != 0. {
-        out.push_str(format!("{}m",m).as_str());
+        out.push_str(format!("{}m", m).as_str());
     }
 
-    t = t - m*60.;
+    t = t - m * 60.;
 
     if t > 1. {
-        out.push_str(format!("{:.*}s",0,t).as_str());
-    }
-    else {
+        out.push_str(format!("{:.*}s", 0, t).as_str());
+    } else {
         out.push_str("< 1s");
     }
 
